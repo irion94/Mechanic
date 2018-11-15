@@ -1,0 +1,963 @@
+Index: src/Components/Calendar.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Components/Calendar.tsx	(date 1539871395000)
++++ src/Components/Calendar.tsx	(date 1539871395000)
+@@ -0,0 +1,44 @@
++import * as React from 'react'
++import { Calendar, CalendarList, Agenda } from 'react-native-calendars';
++
++
++const Calendar = (props) => {
++
++    return(
++        <Calendar
++            // Initially visible month. Default = Date()
++            current={'2012-03-01'}
++            // Minimum date that can be selected, dates before minDate will be grayed out. Default = undefined
++            minDate={'2012-05-10'}
++            // Maximum date that can be selected, dates after maxDate will be grayed out. Default = undefined
++            maxDate={'2012-05-30'}
++            // Handler which gets executed on day press. Default = undefined
++            onDayPress={(day) => {console.log('selected day', day)}}
++            // Handler which gets executed on day long press. Default = undefined
++            onDayLongPress={(day) => {console.log('selected day', day)}}
++            // Month format in calendar title. Formatting values: http://arshaw.com/xdate/#Formatting
++            monthFormat={'yyyy MM'}
++            // Handler which gets executed when visible month changes in calendar. Default = undefined
++            onMonthChange={(month) => {console.log('month changed', month)}}
++            // Hide month navigation arrows. Default = false
++            hideArrows={true}
++            // Replace default arrows with custom ones (direction can be 'left' or 'right')
++            renderArrow={(direction) => (<Arrow />)}
++            // Do not show days of other months in month page. Default = false
++            hideExtraDays={true}
++            // If hideArrows=false and hideExtraDays=false do not switch month when tapping on greyed out
++            // day from another month that is visible in calendar page. Default = false
++            disableMonthChange={true}
++            // If firstDay=1 week starts from Monday. Note that dayNames and dayNamesShort should still start from Sunday.
++            firstDay={1}
++            // Hide day names. Default = false
++            hideDayNames={true}
++            // Show week numbers to the left. Default = false
++            showWeekNumbers={true}
++            // Handler which gets executed when press arrow icon left. It receive a callback can go back month
++            onPressArrowLeft={substractMonth => substractMonth()}
++            // Handler which gets executed when press arrow icon left. It receive a callback can go next month
++            onPressArrowRight={addMonth => addMonth()}
++        />
++    )
++};
+\ No newline at end of file
+Index: src/actions/new_todo_action.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/actions/new_todo_action.tsx	(date 1540489076000)
++++ src/actions/new_todo_action.tsx	(date 1540489076000)
+@@ -0,0 +1,18 @@
++export const OWNER = 'OWNER';
++export const VEHICLE = 'VEHICLE';
++export const TODO_LIST = 'TODO_LIST';
++
++export const set_owner = (data) => ({
++    type: OWNER,
++    data
++});
++
++export const set_vehicle = (data) => ({
++    type: VEHICLE,
++    data
++});
++
++export const set_todoList = (data) => ({
++    type: TODO_LIST,
++    data
++});
+\ No newline at end of file
+Index: src/Components/VehicleChooser.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Components/VehicleChooser.tsx	(date 1540372509000)
++++ src/Components/VehicleChooser.tsx	(date 1540372509000)
+@@ -0,0 +1,58 @@
++import * as React from 'react'
++import {Header, Input, Item} from "native-base";
++import {Icon} from "react-native-elements";
++import {store} from '/Users/irion94/Mechanic/src/mobxStores/Store'
++import {Header, Icon, Picker, Button} from "native-base";
++import {map} from 'ramda'
++import {insertObject, fetchObject} from '/Users/irion94/Mechanic/src/Data/Db/DbMethods'
++import SearchInput from "/Users/irion94/Mechanic/src/Components/SearchInput";
++import {searchPerson} from '/Users/irion94/Mechanic/src/Data/realmFetching'
++import {View} from "react-native";
++
++
++class VehicleChooser extends React.Component{
++
++     state = {
++        input:'',
++        selected: 0,
++        search:''
++    };
++
++    onChangeText = (input: string) => {
++    };
++
++    onValueChange = (value) => {
++        this.setState({selected:value})
++        //props.setState({selected: value})
++    };
++
++    render() {
++        let t = this;
++        let cars = store.cars;
++        console.log(t.state.toString());
++        return (
++            <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
++                <View>
++                    <Picker
++                        renderHeader={() => (
++                            <Header searchBar rounded style={{backgroundColor: 'orange'}}>
++                                <SearchInput onChangeText={t.onChangeText} placeholder={'Search...'}/>
++                            </Header>
++                        )}
++                        //iosIcon={<Icon name="ios-arrow-down-outline"/>}
++                        selectedValue={t.state.selected}
++                        onValueChange={t.onValueChange.bind(t)}
++                    >
++                        {
++                            map((item) => (
++                                <Picker.Item key={item.name} label={item.name} value={cars.indexOf(item)}/>
++                            ), t.state.input === '' ? store.cars : searchPerson(['name'], t.state.input, store.cars))
++                        }
++                    </Picker>
++                </View>
++            </View>
++        );
++    }
++};
++
++export default VehicleChooser
+\ No newline at end of file
+Index: src/reducers/db_util_reducers/new_todo_reducer.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/reducers/db_util_reducers/new_todo_reducer.tsx	(date 1540489070000)
++++ src/reducers/db_util_reducers/new_todo_reducer.tsx	(date 1540489070000)
+@@ -0,0 +1,34 @@
++import {OWNER, TODO_LIST, VEHICLE} from "../../actions/new_todo_action";
++
++const initialState = {
++    owner: undefined,
++    vehicle: undefined,
++    items: [],
++};
++
++export const new_todo_reducer = (state = initialState, action) => {
++    switch (action.type) {
++        case OWNER:
++            return {
++                ...state,
++                owner: action.data,
++                vehicle: null
++            };
++        case VEHICLE:
++            return {
++                ...state,
++                vehicle: action.data,
++                items: []
++            };
++        case TODO_LIST:
++            return {
++                ...state,
++                items: action.data
++            };
++        default: {
++                return {
++                    state
++                }
++            }
++    }
++};
+\ No newline at end of file
+Index: src/Components/TodoList.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Components/TodoList.js	(date 1540378905000)
++++ src/Components/TodoList.js	(date 1540378905000)
+@@ -0,0 +1,32 @@
++/**
++ * Component show all to_do items for a given vehicle object
++ */
++import * as React from 'react';
++import {map} from 'ramda'
++import {CheckBox, Left, ListItem, Right, Text} from "native-base";
++import {withNavigation} from "react-navigation";
++
++const TodoList = (props:any) => {
++    return map((todo) => (
++        <TodoListItem item={todo} key={props.todo[0].items.indexOf(todo)}/>
++    ), props.todo[0].items)
++};
++
++const TodoListItem = withNavigation((props) => {
++    const obj = (({title, done, description}) => ({title, done, description}))(props.item);
++    return (
++        <ListItem onPress={() => {
++            props.navigation.navigate('TodoDetails', {todo:obj})
++        }}>
++            <Left>
++                <Text note>Title: </Text>
++                <Text style={{marginLeft:5}}>{obj.title}</Text>
++            </Left>
++            <Right>
++                <CheckBox checked={obj.done} color={'red'} style={{marginRight:20}}/>
++            </Right>
++        </ListItem>
++    )
++});
++
++export default TodoList
+\ No newline at end of file
+Index: src/Screens/Create/NewTodoCreate.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Screens/Create/NewTodoCreate.tsx	(date 1538682263000)
++++ src/Screens/Create/NewTodoCreate.tsx	(date 1538682263000)
+@@ -0,0 +1,30 @@
++import * as React from 'react'
++import {AlertIOS, Text, TouchableHighlight, View, StyleSheet} from "react-native";
++import {Button} from "react-native-elements";
++import {FormInput} from "react-native-elements";
++import {store} from '/Users/irion94/Mechanic/src/mobxStores/Store'
++import {Icon, Picker} from "native-base";
++import {map} from 'ramda'
++import {insertObject, fetchObject} from '/Users/irion94/Mechanic/src/Data/Db/DbMethods'
++import SearchInput from "../../Components/SearchInput";
++
++
++class OptionScreen extends React.Component {
++    constructor(props) {
++        super(props);
++        this.state = {
++        }
++    }
++
++
++    render() {
++        return (
++            <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
++
++            </View>
++        );
++    }
++}
++
++
++export default OptionScreen
+\ No newline at end of file
+Index: src/Components/PickerHeader.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Components/PickerHeader.tsx	(date 1540373193000)
++++ src/Components/PickerHeader.tsx	(date 1540373193000)
+@@ -0,0 +1,37 @@
++import * as React from 'react';
++import {TouchableOpacity} from "react-native";
++import {Header, Icon} from "native-base";
++import SearchInput from "./SearchInput";
++import {applicationColor, universalStyles} from "../Styles/UniversalStyles";
++
++/**
++ * Header used in UniversalPicker component. Can be used to every picker header components.
++ * @param props
++ * @constructor
++ */
++
++const PickerHeader = (props: any) => {
++
++    return (
++        <Header searchBar rounded style={{backgroundColor: applicationColor.header}}>
++            <TouchableOpacity
++                style={universalStyles.centerItem}
++                onPress={props.backAction}
++            >
++                <Icon name='arrow-back' color={'white'}/>
++            </TouchableOpacity>
++            <SearchInput onChangeText={props.onChangeText} placeholder={'Search...'}/>
++            <TouchableOpacity
++                style={universalStyles.centerItem}
++                onPress={() => {
++                    props.showContent(true);
++                    props.backAction();
++                }}
++            >
++                <Icon name={'ios-add-circle'}/>
++            </TouchableOpacity>
++        </Header>
++    )
++};
++
++export default PickerHeader
+\ No newline at end of file
+Index: src/Components/UniversalPicker.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Components/UniversalPicker.tsx	(date 1540487723000)
++++ src/Components/UniversalPicker.tsx	(date 1540487723000)
+@@ -0,0 +1,100 @@
++import * as React from 'react'
++import {Icon, Picker} from "native-base";
++import {map} from "ramda";
++import {searchPerson} from "../Data/realmFetching";
++import {PickerItem, StyleSheet, View} from "react-native";
++import {borderStyles, universalStyles, width} from "../Styles/UniversalStyles";
++import PickerHeader from '/Users/irion94/Mechanic/src/Components/PickerHeader'
++import {set_owner} from '/Users/irion94/Mechanic/src/actions/new_todo_action'
++import {connect} from "react-redux";
++
++/**
++ * WORK WITH IOS ONLY
++ * Props: selectedValue - function, return selected value (required)
++ *        SearchKeys - keys for ramdajs research (required)
++ *        array - array of objects (required)
++ *        withKeys - specify if keys are showing (optional)
++ *        style - (optional)
++ *        TODO: props describing object-key (printed title od Picker
++ */
++
++
++interface Props {
++    array: []
++    searchByKeys: [[string]]
++    selectedValue: any
++    withKeys?: boolean
++    style?: object
++    deeperKey?: string
++    placeholder:string
++    showContent: any
++    selected: object
++}
++
++
++class UniversalPicker extends React.Component<Props> {
++    state = {
++        search: '',
++        selected: undefined,
++        selectedPrimaryKey: '',
++    };
++
++    onChangeText = (search) => {
++        this.setState({search});
++    };
++
++    onValueChange(value: any) {
++        this.setState({
++            selected: value
++        }, () => {
++            this.props.dispatch(this.props.dispatchAction(value))
++        });
++    }
++
++
++    render() {
++        let {array, searchByKeys, withKeys, deeperKey, placeholder, selected} = this.props;
++        console.log(placeholder , array, this.state.selected);
++        return (
++            <View style={{margin: 5}}>
++                <Picker
++                    renderHeader={(backAction) => (
++                        <PickerHeader
++                            backAction={backAction}
++                            onChangeText={this.onChangeText}
++                            showContent={this.props.showContent}
++                        />
++                    )}
++                    placeholder={placeholder}
++                    iosIcon={<Icon name="ios-arrow-down-outline"/>}
++                    style={[componentStyle.picker, borderStyles.border]}
++                    selectedValue={this.state.selected}
++                    onValueChange={this.onValueChange.bind(this)}
++                >
++                    {
++                        map((item) =>(
++                                <Picker.Item
++                                    key={Object.keys(item)[0]}
++                                    label={
++                                        map((key) =>
++                                            (withKeys ? key.toString().toUpperCase() + ": " : '') + (deeperKey && item[key][deeperKey] !== undefined ? item[key][deeperKey] : item[key]) + ' \n', searchByKeys).toString().split(',')
++                                    }
++                                    value={item}
++                                />
++                            ), this.state.search === '' ? array : searchPerson(searchByKeys, this.state.search, array))
++                    }
++                </Picker>
++            </View>
++        )
++    }
++}
++
++const componentStyle = StyleSheet.create({
++    picker: {
++        width: '100%',
++        height: 'auto'
++    }
++});
++
++export default UniversalPicker
++
+Index: src/Screens/Create/New_repair.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Screens/Create/New_repair.tsx	(date 1541503670000)
++++ src/Screens/Create/New_repair.tsx	(date 1541503670000)
+@@ -0,0 +1,149 @@
++import * as React from 'react'
++import {ScrollView, View} from "react-native";
++import {Button, Form, Icon, Text} from "native-base";
++import {connect} from "react-redux";
++import UniversalPicker from "../../Components/UniversalPicker";
++import {addTmpObject, fetchObject, createNewTodoList} from '/Users/irion94/Mechanic/src/Data/Db/DbMethods'
++import NewClientScreen from "./NewClientScreen";
++import TodoListCreator from "../../Components/TodoListCreator";
++import {universalStyles} from "../../Styles/UniversalStyles";
++import {set_owner, set_todoList, set_vehicle, set_kurwa_cars_jego_mac} from "../../actions/new_todo_action";
++import {map} from 'ramda'
++import {new_todo_reducer} from "../../reducers/db_util_reducers/new_todo_reducer";
++
++interface State {
++    brandArray: any
++    ownerArray: any
++    state: object
++    content: boolean
++    owner: any
++    vehicle:any
++    array:[]
++}
++
++interface Props {
++    state: object
++    brandArray: any
++    cars: object
++    content: boolean
++    owner: any
++    vehicle:any
++    array:[]
++}
++
++class New_repair extends React.Component <State, Props> {
++    constructor(props) {
++        super(props);
++        this.state = {
++            //stateless ;>
++            array: this.props.ownerArray,
++
++        }
++    }
++
++    static navigationOptions = ({navigation}) => ({
++        headerRight:
++            <Icon
++                onPress={() => {
++                    //createNewTodoList()
++                }}
++                name={'done-all'}
++                type="MaterialIcons"
++                style={[universalStyles.centerItem, {marginRight: 10, color: 'white'}]}
++            />
++
++    });
++
++    _finishCreate = (data:[]) => {
++        this.props.dispatch(set_todoList(data))
++    };
++
++    _showContent = (bool: boolean) => {
++        this.setState({content: bool});
++        this.setState({owner: undefined})
++    };
++
++
++    render() {
++        let {owner, vehicle, content} = this.state;
++        //let ownerArray = this.props.ownerArray;
++        let ownerArray = this.state.array;
++        let newTodo = this.props.newTodo;
++        //let cars = newTodo.owner.cars;
++
++        console.log('NewRepair:',newTodo.owner, newTodo.vehicle);
++        let arr = [];
++
++        newTodo.owner !== undefined ? map( item => arr.push(item), newTodo.owner.cars) : console.log('nulllllll');
++        console.log(arr)
++
++        return (
++            <View>
++                <ScrollView>
++
++                    <Button onPress={() => createNewTodoList(this.props.newTodo)}>
++                        <Text>Butt</Text>
++                    </Button>
++
++                    <UniversalPicker
++                        array={ownerArray}
++                        searchByKeys={['name', 'surname', 'phone']}
++                        dispatchAction={set_owner}
++                        withKeys={true}
++                        dispatch={this.props.dispatch}
++                        showContent={this._showContent}
++                        placeholder={'Select Owner'}
++                        //selected={newTodo.owner}
++                    />
++
++                    {content ?
++                        <View style={{height: '100%'}}>
++                            <NewClientScreen/>
++                        </View>
++                        :
++                        null
++                    }
++
++                    {
++                        newTodo.owner !== undefined ?
++                            <UniversalPicker
++                                array={arr}
++                                searchByKeys={['brand_name', 'model_name', 'vin', 'rej']}
++                                dispatchAction={set_vehicle}
++                                withKeys={true}
++                                dispatch={this.props.dispatch}
++                                placeholder={'Select Vehicle'}
++                                //selected={newTodo.vehicle}
++                            />
++                            : null
++                    }
++
++
++                    {
++                        newTodo.vehicle !== undefined ?
++                            <Form>
++                                <TodoListCreator
++                                    finishCreate={this._finishCreate}
++                                />
++                            </Form>
++                            :
++                            null
++                    }
++
++
++                </ScrollView>
++            </View>
++        )
++    }
++}
++
++const mapStateToProps = (state: any) => {
++    return {
++        brandArray: state.model_owner.brandArray,
++        carArray: state.model_owner.carArray,
++        ownerArray: state.model_owner.ownerArray,
++        newTodo: state.new_todo_reducer
++    }
++};
++
++export default connect(mapStateToProps)(New_repair)
+\ No newline at end of file
+Index: src/Components/PersonInformation.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Components/PersonInformation.tsx	(date 1539021137000)
++++ src/Components/PersonInformation.tsx	(date 1539021137000)
+@@ -0,0 +1,23 @@
++import * as React from 'react'
++import {Header, Input, Item} from "native-base";
++import {Icon} from "react-native-elements";
++import {store} from '/Users/irion94/Mechanic/src/mobxStores/Store'
++import {Header, Icon, Picker, Button} from "native-base";
++import {map} from 'ramda'
++import {insertObject, fetchObject} from '/Users/irion94/Mechanic/src/Data/Db/DbMethods'
++import SearchInput from "/Users/irion94/Mechanic/src/Components/SearchInput";
++import {searchPerson} from '/Users/irion94/Mechanic/src/Data/realmFetching'
++import {View} from "react-native";
++
++class PersonInformation extends React.Component {
++    state = {
++    };
++
++    render(){
++        return(
++            <Picker>
++
++            </Picker>
++        )
++    }
++}
+\ No newline at end of file
+Index: src/Styles/UniversalStyles.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Styles/UniversalStyles.tsx	(date 1539866137000)
++++ src/Styles/UniversalStyles.tsx	(date 1539866137000)
+@@ -0,0 +1,28 @@
++import {Dimensions, StyleSheet} from "react-native";
++
++export const {height, width} = Dimensions.get('window');
++
++
++export const universalStyles = StyleSheet.create({
++    centerItem:{
++        justifyContent: 'center',
++        alignItems: 'center',
++        margin: 4,
++    }
++});
++
++export const borderStyles = StyleSheet.create({
++    border: {
++        borderWidth: 1,
++        borderRadius: 25,
++        borderColor: 'gray',
++    }
++});
++
++
++export const applicationColor = ({
++    header: '#5F6376',
++    activeTintColor: '#5F6376',
++    inactiveTintColor: 'gray',
++    redAlertColor: '#D53333'
++});
+\ No newline at end of file
+Index: src/Components/FormInputs/UniversalFormInput.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Components/FormInputs/UniversalFormInput.tsx	(date 1540374668000)
++++ src/Components/FormInputs/UniversalFormInput.tsx	(date 1540374668000)
+@@ -0,0 +1,33 @@
++/**
++ * Standardized form input used to in whole application
++ * @param props
++ * @constructor
++ */
++
++import * as React from 'react'
++import {Input, Item, Label,} from "native-base";
++const fromEntries = require('fromentries');
++
++
++const UniversalFormInput = (props) => {
++    let {stateKey, onChangeText, optional} = props;
++    let placeholder = stateKey.charAt(0).toUpperCase()+stateKey.slice(1);
++
++    if(optional){
++        placeholder = placeholder.concat(' (optional)');
++    }
++
++    let _onChangeText = (text) => {
++        let object = fromEntries([stateKey, text]);
++        onChangeText(object)
++    };
++
++    return (
++        <Item floatingLabel={true}>
++            <Label style={{textAlign: 'center'}}>{placeholder}</Label>
++            <Input onChangeText={(text) => _onChangeText(text)}/>
++        </Item>
++    )
++};
++
++export default UniversalFormInput
+\ No newline at end of file
+Index: src/index.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/index.js	(date 1539103965000)
++++ src/index.js	(date 1539103965000)
+@@ -0,0 +1,11 @@
++import Navigator from '/Users/irion94/Mechanic/src/routes/Route'
++import {Provider} from 'react-redux'
++import store from '/Users/irion94/Mechanic/src/routes/store'
++import React from "react";
++
++export default App =  () => (
++    <Provider store={store}>
++        <Navigator/>
++    </Provider>
++
++);
+\ No newline at end of file
+Index: src/routes/store.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/routes/store.js	(date 1539613024000)
++++ src/routes/store.js	(date 1539613024000)
+@@ -0,0 +1,14 @@
++import {applyMiddleware, createStore} from 'redux'
++import reducers from '/Users/irion94/Mechanic/src/reducers'
++import loger from 'redux-logger'
++import thunk from 'redux-thunk'
++
++const middleware = [
++
++];
++if(process.env.NODE_ENV === 'development'){
++    middleware.push(loger);
++}
++
++let store = createStore(reducers, applyMiddleware(...middleware, thunk));
++export default store;
+\ No newline at end of file
+Index: src/reducers/db_util_reducers/model_owner_reducer.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/reducers/db_util_reducers/model_owner_reducer.tsx	(date 1539695799000)
++++ src/reducers/db_util_reducers/model_owner_reducer.tsx	(date 1539695799000)
+@@ -0,0 +1,50 @@
++import {START_FETCHING, IS_FECHING, FETCH_DONE, FETCH_BRAND_DONE, FETCH_OWNER_DONE} from '/Users/irion94/Mechanic/src/actions/db_util_action'
++
++const model_owner_State = {
++    carArray: [],
++    brandArray: [],
++    ownerArray: [],
++    loading: false,
++};
++
++export const model_owner = (state = model_owner_State, action) => {
++    switch (action.type) {
++        case START_FETCHING:
++            return {
++                ...state,
++                loading: true,
++            };
++        case FETCH_DONE:
++            return {
++                ...state,
++                loading: false,
++                carArray: action.data
++            };
++        case FETCH_BRAND_DONE:
++            return {
++                ...state,
++                loading:false,
++                brandArray: action.data
++            };
++        case FETCH_OWNER_DONE:
++            return {
++                ...state,
++                loading:false,
++                ownerArray: action.data
++            };
++        default:
++            return state;
++    }
++};
++
++const new_repair_State = {
++
++};
++
++
++export const create_New_Repair = (state = new_repair_State, action) => {
++    switch (action.type) {
++        default:
++            return state;
++    }
++}
+Index: src/reducers/index.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/reducers/index.tsx	(date 1539970190000)
++++ src/reducers/index.tsx	(date 1539970190000)
+@@ -0,0 +1,9 @@
++import {model_owner, create_New_Repair} from '/Users/irion94/Mechanic/src/reducers/db_util_reducers/model_owner_reducer'
++import { combineReducers } from "redux";
++import {new_todo_reducer} from "./db_util_reducers/new_todo_reducer";
++
++export default combineReducers({
++    model_owner,
++    create_New_Repair,
++    new_todo_reducer,
++})
+\ No newline at end of file
+Index: src/actions/db_util_action.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/actions/db_util_action.tsx	(date 1539969717000)
++++ src/actions/db_util_action.tsx	(date 1539969717000)
+@@ -0,0 +1,48 @@
++export const START_FETCHING = 'START_FETCHING';
++export const IS_FECHING = 'IS_FECHING';
++export const FETCH_DONE = 'FETCH_DONE';
++export const FETCH_BRAND_DONE = 'FETCH_BRAND_DONE';
++export const FETCH_OWNER_DONE = 'FETCH_OWNER_DONE';
++import {fetchObject, DB_utils} from '/Users/irion94/Mechanic/src/Data/Db/DbMethods'
++import databaseOptions from '/Users/irion94/Mechanic/src/Data/Db/DbHelper'
++
++export const fetchingStart = () => ({
++    type: START_FETCHING,
++});
++
++export const fetchingDone = (data: any) => ({
++    type: FETCH_DONE,
++    data
++});
++
++
++export const fetchingBrandDone = (data: any) => ({
++    type: FETCH_BRAND_DONE,
++    data
++});
++
++export const fetchingOwnerDone = (data: any) => ({
++    type: FETCH_OWNER_DONE,
++    data
++});
++
++export const fetch =  (db_fetch_method, action) => {
++    return async (dispatch) => {
++        dispatch(fetchingStart());
++        return await db_fetch_method
++            .then(async res => await dispatch(action(res)))
++    }
++};
++
++
++
++
++
++// export const fetch = () => {
++//     return dispatch => {
++//         dispatch(fetchingStart());
++//         return async dispatch => await fetchObject('Model_Owner', undefined, 'cars.history.inProgress != $0', false)
++//             .then(async res => await JSON.parse(JSON.stringify(res)))
++//             .then(async data => await dispatch(fetchingDone(data)))
++//     }
++// };
+Index: src/Components/TodoListCreator.tsx
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/Components/TodoListCreator.tsx	(date 1540373117000)
++++ src/Components/TodoListCreator.tsx	(date 1540373117000)
+@@ -0,0 +1,87 @@
++import * as React from 'react';
++import {Alert, AlertIOS, ScrollView, View} from "react-native";
++import {Button, Form, Icon, List, ListItem, Segment, Text, Textarea} from "native-base";
++import Swipeout from 'react-native-swipeout';
++import {map} from 'ramda'
++import {applicationColor, borderStyles, universalStyles} from "../Styles/UniversalStyles";
++import { Calendar, CalendarList, Agenda } from 'react-native-calendars';
++
++/**
++ * Component where we just create list of new thinks to do.
++ * Text Area, Scrollable List
++ */
++
++class TodoListCreator extends React.Component {
++
++    state = {
++        description: '',
++        todos: [],
++    };
++
++    _onPressAdd = (todos, description) => {
++        todos.push(description);
++        this.setState({description: ''}, () => this.props.finishCreate(todos))
++    };
++
++    _deleteTodo = (key, todos) => {
++        todos.splice(key, 1);
++        this.setState({todos: todos}, () => this.props.finishCreate(todos));
++    };
++
++    render() {
++        let {todos, description} = this.state;
++        return (
++            <View style={[borderStyles.border, {margin: 5, padding: 8}]}>
++                <Form>
++                    <Textarea
++                        onChangeText={(description) => this.setState({description})}
++                        style={[{margin: 5}, borderStyles.border]}
++                        rowSpan={4}
++                        value={description}
++                        placeholder="Todo description"
++                    />
++
++                    <Segment style={{backgroundColor: 'parent'}}>
++                        <Button first onPress={() => this._onPressAdd(todos, description)}>
++                            <Icon name={'ios-add-circle'}/>
++                        </Button>
++                        <Button>
++                            <Icon name={'ios-camera'}/>
++                        </Button>
++                    </Segment>
++                </Form>
++                    <ScrollView style={{maxHeight: 250}}>
++                        <List>
++                            {
++
++                                todos.length !== 0 ?
++                                    map((item) => (
++                                        <Swipeout
++                                            key={todos.indexOf(item)}
++                                            right={[{
++                                                onPress: () => this._deleteTodo(todos.indexOf(item), todos),
++                                                component: <Icon active name="trash" style={[{color:'white', marginLeft: 20}, universalStyles.centerItem]}/>,
++                                                backgroundColor: applicationColor.redAlertColor
++                                            }]}
++                                            autoClose={true}
++                                            style={[borderStyles.border, {margin: 5}]}
++                                        >
++                                            <View>
++                                                <ListItem>
++                                                    <Text>{item}</Text>
++                                                </ListItem>
++                                            </View>
++                                        </Swipeout>
++                                    ), todos)
++                                    : null
++
++                            }
++                        </List>
++                    </ScrollView>
++            </View>
++        )
++    }
++}
++
++export default TodoListCreator
++
